@@ -33,13 +33,13 @@ func main() {
 	app.Use(recover.New())
 	app.Use(myLogger())
 	app.Use(hsts)
-	app.Get("/", docs)
+	// app.Get("/", docs)
 	app.Static("/", "docs", fiber.Static{
 		MaxAge:        3600 * 24 * 7,
 		Compress:      true,
 		CacheDuration: time.Hour,
 	})
-	app.Get("/dashboard", monitor.New())
+	app.Get("/monitor", monitor.New())
 	app.Get("/:room/announce", announce)
 	app.Get("/:room/scrape", scrape)
 	app.Server().LogAllErrors = true
@@ -109,12 +109,5 @@ func myLogger() fiber.Handler {
 
 func hsts(c *fiber.Ctx) error {
 	c.Set("Strict-Transport-Security", "max-age=31536000")
-	return c.Next()
-}
-
-func docs(c *fiber.Ctx) error {
-	if c.Hostname() != "privtracker.com" {
-		return c.Redirect("https://privtracker.com/", fiber.StatusMovedPermanently)
-	}
 	return c.Next()
 }
