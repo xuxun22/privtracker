@@ -12,8 +12,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
-var DOMAIN="tracker.whereami.com.cn"
-var PORT="1337"
+var DOMAIN = "tracker.whereami.com.cn"
+var PORT = "1337"
 
 func main() {
 	go Cleanup()
@@ -38,13 +38,13 @@ func main() {
 }
 
 func myListener() net.Listener {
-	var certDir="cert"
+	var certDir = "cert"
 	cert, err := tls.LoadX509KeyPair(certDir+"/"+DOMAIN+".pem", certDir+"/"+DOMAIN+".key")
 	if err != nil {
 		log.Fatal(err)
 	}
 	cfg := &tls.Config{Certificates: []tls.Certificate{cert}}
-	ln, err := tls.Listen("tcp", ":" + PORT, cfg)
+	ln, err := tls.Listen("tcp", ":"+PORT, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +53,6 @@ func myListener() net.Listener {
 
 func myLogger() fiber.Handler {
 	loggerConfig := logger.ConfigDefault
-	loggerConfig.Format = "${status} - ${latency} ${ip} ${method} ${path} ${bytesSent} - ${referer} - ${ua}\n"
+	loggerConfig.Format = "[${time}] ${ip} ${status} - ${latency} ${method} ${path} ${bytesSent} - ${referer} - ${ua}\n"
 	return logger.New(loggerConfig)
 }
-
