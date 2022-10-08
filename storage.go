@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/binary"
+	"fmt"
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -41,6 +43,18 @@ func NewShards(size int) []*shard {
 
 func serialize(ip string, port uint16) serializedPeer {
 	return serializedPeer(append(net.ParseIP(ip), byte(port>>8), byte(port)))
+}
+
+func deserialize(peer serializedPeer) (ip string, port uint16) {
+	var IP net.IP
+	if bytes.HasPrefix([]byte(peer), v4InV6Prefix) {
+		IP = net.IP(peer[12:16])
+	} else {
+		IP = net.IP(peer[0:16])
+	}
+	ip = IP.String()
+	port = (uint16(peer[16]) << 8) + uint16(peer[17])
+	return
 }
 
 func PutPeer(room, infoHash, ip string, port uint16, seeding bool) {
@@ -97,6 +111,7 @@ func GetPeers(room, infoHash, ip string, port uint16, seeding bool, numWant uint
 	shard.RLock()
 	client := serialize(ip, port)
 	// seeders don't need other seeders
+	var printableSeeders []string
 	if !seeding {
 		for peer := range shard.swarms[h].seeders {
 			if numWant == 0 {
@@ -107,9 +122,13 @@ func GetPeers(room, infoHash, ip string, port uint16, seeding bool, numWant uint
 			} else {
 				peersIPv6 = append(peersIPv6, peer...)
 			}
+			printableIP, printablePort := deserialize(peer)
+			printableSeeders = append(printableSeeders, fmt.Sprintf("%s:%d", printableIP, printablePort))
 			numWant--
 		}
 	}
+	log.Printf("Seeders for %v on %v: %v\n", ip, room, printableSeeders)
+	var printableLeechers []string
 	for peer := range shard.swarms[h].leechers {
 		if peer == client {
 			continue
@@ -122,8 +141,11 @@ func GetPeers(room, infoHash, ip string, port uint16, seeding bool, numWant uint
 		} else {
 			peersIPv6 = append(peersIPv6, peer...)
 		}
+		printableIP, printablePort := deserialize(peer)
+		printableLeechers = append(printableLeechers, fmt.Sprintf("%s:%d", printableIP, printablePort))
 		numWant--
 	}
+	log.Printf("Leechers for %v on %v: %v\n", ip, room, printableLeechers)
 	numSeeders = len(shard.swarms[h].seeders)
 	numLeechers = len(shard.swarms[h].leechers)
 	shard.RUnlock()
